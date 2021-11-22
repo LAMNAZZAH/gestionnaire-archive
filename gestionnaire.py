@@ -1,5 +1,4 @@
 from calendar import TextCalendar
-#from babel.core import Locale
 from tkcalendar import *
 from enum import Flag
 from tkinter import *
@@ -7,16 +6,21 @@ import tkinter as tk
 from tkinter import ttk, filedialog, font, messagebox, StringVar, simpledialog
 import tkinter
 from typing import Sized, TextIO
-import pymysql
 from datetime import date
 import datetime
 import time
-import pymysql
 import random
+import sqlite3
 
+def initDb (sqlConnection):
+    cursor = sqlConnection.cursor()
+    
+    # Create dossier database if not exists
+    # Create movement database if not exists
 
 class management_sys:
     def __init__(self, root):
+        self.sqlCon = sqlite3.connect('gestionnaire.db')
         self.root = root
         self.root.title("gestionnaire de marchés")
         self.root.geometry('1000x650')
@@ -117,10 +121,8 @@ class management_sys:
                 try:
                     rd = random.randint(0, 1000)
                     id = self.reference.get() + "-" + rd
-                    sqlCon = pymysql.connect(
-                        host="localhost", user="root", password="1234", database="thenew")
-                    cur = sqlCon.cursor()
-                    cur.execute("INSERT INTO thenew.mouvement (idmouvement, parqui, le, action, dossier_reference) SELECT %s, reference FROM thenew.dossier WHERE reference=%s", (
+                    cur = self.sqlCon.cursor()
+                    cur.execute("INSERT INTO mouvement (idmouvement, parqui, le, action, dossier_reference) SELECT %s, reference FROM dossier WHERE reference=%s", (
                         id.get(),
                         self.parqui.get(),
                         self.le.get(),
@@ -129,8 +131,7 @@ class management_sys:
                         self.reference.get(),
                         self.reference.get()
                     ))
-                    sqlCon.commit()
-                    sqlCon.close()
+                    self.sqlCon.commit()
                     messagebox.showinfo(
                         "", "un marché a été ajouté avec succès")
                     #sqlCon = pymysql.connect(host="localhost", user="root", password="1234", database="thenew")
@@ -227,9 +228,7 @@ class management_sys:
                     "", "veuillez entrer les informations requises!!")
             else:
                 try:
-                    sqlCon = pymysql.connect(
-                        host="localhost", user="root", password="1234", database="thenew")
-                    cur = sqlCon.cursor()
+                    cur = self.sqlCon.cursor()
                     cur.execute("INSERT INTO dossier VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)", (
 
                         self.reference.get(),
@@ -247,8 +246,7 @@ class management_sys:
                         self.informations_additionnelles.get()
                     ))
 
-                    sqlCon.commit()
-                    sqlCon.close()
+                    self.sqlCon.commit()
                     messagebox.showinfo(
                         "", "un marché a été ajouté avec succès")
                     Display()
@@ -260,10 +258,8 @@ class management_sys:
         def Update():
             selectededit()
             self.informations_additionnelles.set(self.note.get("1.0", END))
-            sqlCon = pymysql.connect(
-                host="localhost", user="root", password="1234", database="thenew")
-            cur = sqlCon.cursor()
-            cur.execute("UPDATE thenew.dossier SET annee=%s, nature=%s, archive_le=%s, numero=%s, status=%s, local=%s, boitier=%s, travee=%s, tablette=%s, valable=%s, informations_additionnelles=%s WHERE  reference=%s", (
+            cur = self.sqlCon.cursor()
+            cur.execute("UPDATE dossier SET annee=%s, nature=%s, archive_le=%s, numero=%s, status=%s, local=%s, boitier=%s, travee=%s, tablette=%s, valable=%s, informations_additionnelles=%s WHERE  reference=%s", (
                 self.annee.get(),
                 self.nature.get(),
                 self.archive_le.get(),
@@ -281,24 +277,20 @@ class management_sys:
             answer = messagebox.askyesno(
                 "confirmer", "est-ce-que vous voulez vraiment mis a jour")
             if answer:
-                sqlCon.commit()
-                sqlCon.close()
+                self.sqlCon.commit()
                 messagebox.showinfo(
                     "", "un marché a été mise à jour avec succèss")
                 Display()
 
         def Display():
-            sqlCon = pymysql.connect(
-                host="localhost", user="root", password="1234", database="thenew")
-            cur = sqlCon.cursor()
-            cur.execute("SELECT * FROM thenew.dossier")
+            cur = self.sqlCon.cursor()
+            cur.execute("SELECT * FROM dossier")
             result = cur.fetchall()
             if len(result) != 0:
                 self.info_de_marche.delete(*self.info_de_marche.get_children())
                 for row in result:
                     self.info_de_marche.insert('', END, values=row)
-            sqlCon.commit()
-            sqlCon.close()
+            self.sqlCon.commit()
 
         def Exit():
             iExit = messagebox.askyesno("quitter", "voulez vous quitter?")
@@ -323,11 +315,9 @@ class management_sys:
             self.note.delete('1.0', END)
 
         def Delete():
-            sqlCon = pymysql.connect(
-                host="localhost", user="root", password="1234", database="thenew")
-            cur = sqlCon.cursor()
+            cur = self.sqlCon.cursor()
             cur.execute(
-                "DELETE FROM thenew.dossier WHERE reference=%s", self.reference.get())
+                "DELETE FROM dossier WHERE reference=%s", self.reference.get())
 
             if self.info_de_marche.focus() == "":
                 messagebox.showinfo(
@@ -337,8 +327,7 @@ class management_sys:
                     "confirmation", "est-ce-que vous voulez vraiment supprimer definitivement un marche")
                 if answer:
 
-                    sqlCon.commit()
-                    sqlCon.close()
+                    self.sqlCon.commit()
                     messagebox.showinfo(
                         "", "un marché a été suprimer definitivement")
                     Display()
@@ -365,11 +354,9 @@ class management_sys:
 
         def Search():
             try:
-                sqlCon = pymysql.connect(
-                    host="localhost", user="root", password="1234", database="thenew")
-                cur = sqlCon.cursor()
+                cur = self.sqlCon.cursor()
                 cur.execute(
-                    "SELECT* FROM thenew.dossier WHERE reference=%s", self.reference.get())
+                    "SELECT* FROM dossier WHERE reference=%s", self.reference.get())
 
                 record = cur.fetchone()
 
@@ -389,28 +376,24 @@ class management_sys:
                 self.note.delete("1.0", END)
                 self.note.insert(END, record[11])
 
-                sqlCon.commit()
+                self.sqlCon.commit()
 
             except:
 
                 messagebox.showinfo(
                     "", "aucun résultat ne correspond à votre recherche")
                 Reset()
-            sqlCon.close()
 
         def byyear(event):
-            sqlCon = pymysql.connect(
-                host="localhost", user="root", password="1234", database="thenew")
-            cur = sqlCon.cursor()
+            cur = self.sqlCon.cursor()
             cur.execute(
-                "SELECT * FROM thenew.dossier where annee=%s", self.byyear.get())
+                "SELECT * FROM dossier where annee=%s", self.byyear.get())
             result = cur.fetchall()
             if len(result) != 0:
                 self.info_de_marche.delete(*self.info_de_marche.get_children())
                 for row in result:
                     self.info_de_marche.insert('', END, values=row)
-            sqlCon.commit()
-            sqlCon.close()
+            self.sqlCon.commit()
 
 
 ########################################### !  Frames  ##########################################################
