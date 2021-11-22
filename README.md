@@ -2,5 +2,7 @@
 
 ## TODOS :
 
-- [ ] Migrate to sqlite
-- [ ] Initialize database tables
+- [x] Migrate to sqlite
+- [x] Initialize database tables
+- [ ] Fix Add Movements 
+- [ ] Display movements
