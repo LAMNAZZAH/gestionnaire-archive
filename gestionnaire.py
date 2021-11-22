@@ -12,15 +12,43 @@ import time
 import random
 import sqlite3
 
+# Create needed tables if they don't exist
 def initDb (sqlConnection):
     cursor = sqlConnection.cursor()
     
     # Create dossier database if not exists
+    cursor.execute('''CREATE TABLE IF NOT EXISTS dossier (
+        reference varchar(40) PRIMARY KEY,
+        annee varchar(45) DEFAULT NULL,
+        nature varchar(45) DEFAULT NULL,
+        archive_le varchar(45) DEFAULT NULL,
+        numero varchar(45) DEFAULT NULL,
+        status varchar(45) DEFAULT NULL,
+        local varchar(45) DEFAULT NULL,
+        boitier varchar(45) DEFAULT NULL,
+        travee varchar(45) DEFAULT NULL,
+        tablette varchar(45) DEFAULT NULL,
+        valable varchar(45) DEFAULT NULL,
+        informations_additionnelles varchar(45) DEFAULT NULL
+    );''')
+    
     # Create movement database if not exists
+    cursor.execute('''CREATE TABLE IF NOT EXISTS mouvement (
+        idmouvement int NOT NULL,
+        parqui varchar(45) DEFAULT NULL,
+        le varchar(45) DEFAULT NULL,
+        action varchar(45) DEFAULT NULL,
+        dossier_reference varchar(40) NOT NULL REFERENCES dossier (reference)
+    );''')
+    
+    # Create dossier_reference index
+    cursor.execute('CREATE INDEX IF NOT EXISTS fk_mouvement_dossier_idx ON mouvement (dossier_reference);')
+    sqlConnection.commit()
 
 class management_sys:
     def __init__(self, root):
         self.sqlCon = sqlite3.connect('gestionnaire.db')
+        initDb(self.sqlCon) # Initialize database tables
         self.root = root
         self.root.title("gestionnaire de marchés")
         self.root.geometry('1000x650')
@@ -122,7 +150,7 @@ class management_sys:
                     rd = random.randint(0, 1000)
                     id = self.reference.get() + "-" + rd
                     cur = self.sqlCon.cursor()
-                    cur.execute("INSERT INTO mouvement (idmouvement, parqui, le, action, dossier_reference) SELECT %s, reference FROM dossier WHERE reference=%s", (
+                    cur.execute("INSERT INTO mouvement (idmouvement, parqui, le, action, dossier_reference) SELECT ?, reference FROM dossier WHERE reference=?", (
                         id.get(),
                         self.parqui.get(),
                         self.le.get(),
@@ -136,7 +164,7 @@ class management_sys:
                         "", "un marché a été ajouté avec succès")
                     #sqlCon = pymysql.connect(host="localhost", user="root", password="1234", database="thenew")
                     #cur = sqlCon.cursor()
-                    # cur.execute("UPDATE thenew.dossier SET valable=%s WHERE reference=%s", (
+                    # cur.execute("UPDATE thenew.dossier SET valable=? WHERE reference=?", (
                     # self.valable.get(),
                     # self.reference.get()
                     # ))
@@ -229,7 +257,7 @@ class management_sys:
             else:
                 try:
                     cur = self.sqlCon.cursor()
-                    cur.execute("INSERT INTO dossier VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)", (
+                    cur.execute("INSERT INTO dossier VALUES(?,?,?,?,?,?,?,?,?,?,?,?)", (
 
                         self.reference.get(),
                         self.annee.get(),
@@ -259,7 +287,7 @@ class management_sys:
             selectededit()
             self.informations_additionnelles.set(self.note.get("1.0", END))
             cur = self.sqlCon.cursor()
-            cur.execute("UPDATE dossier SET annee=%s, nature=%s, archive_le=%s, numero=%s, status=%s, local=%s, boitier=%s, travee=%s, tablette=%s, valable=%s, informations_additionnelles=%s WHERE  reference=%s", (
+            cur.execute("UPDATE dossier SET annee=?, nature=?, archive_le=?, numero=?, status=?, local=?, boitier=?, travee=?, tablette=?, valable=?, informations_additionnelles=? WHERE  reference=?", (
                 self.annee.get(),
                 self.nature.get(),
                 self.archive_le.get(),
@@ -317,7 +345,7 @@ class management_sys:
         def Delete():
             cur = self.sqlCon.cursor()
             cur.execute(
-                "DELETE FROM dossier WHERE reference=%s", self.reference.get())
+                "DELETE FROM dossier WHERE reference=?", self.reference.get())
 
             if self.info_de_marche.focus() == "":
                 messagebox.showinfo(
@@ -356,7 +384,7 @@ class management_sys:
             try:
                 cur = self.sqlCon.cursor()
                 cur.execute(
-                    "SELECT* FROM dossier WHERE reference=%s", self.reference.get())
+                    "SELECT* FROM dossier WHERE reference=?", self.reference.get())
 
                 record = cur.fetchone()
 
@@ -387,7 +415,7 @@ class management_sys:
         def byyear(event):
             cur = self.sqlCon.cursor()
             cur.execute(
-                "SELECT * FROM dossier where annee=%s", self.byyear.get())
+                "SELECT * FROM dossier where annee=?", self.byyear.get())
             result = cur.fetchall()
             if len(result) != 0:
                 self.info_de_marche.delete(*self.info_de_marche.get_children())
